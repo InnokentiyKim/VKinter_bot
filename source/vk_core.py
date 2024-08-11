@@ -1,5 +1,6 @@
 import vk_api
 from datetime import datetime
+from settings.config import SEARCH_LIMIT
 
 
 class VKUser:
@@ -15,6 +16,10 @@ class VKUser:
         self.age = None
         self.photo = None
         self.phone = None
+        self.fields = "bdate,city,relation,sex,photo_200,contacts,about"
+
+    def _get_age_range(self, user_age: int, start_age: int, end_age: int, ) -> tuple:
+        pass
 
     def get_profiles_info(self, user_id: int) -> None:
         info = self.vk.account.getProfileInfo(user_id=user_id)
@@ -29,5 +34,5 @@ class VKUser:
         self.phone = info.get('phone')
         self.age = datetime.now().year - int(self.bdate.split('.')[2]) if self.bdate else None
 
-    def search_users(self, search_request: str) -> list:
+    def search_users(self, search_request: str='', count: int=SEARCH_LIMIT, fields: str='') -> list:
         return self.vk.users.search(q=search_request, count=5)
