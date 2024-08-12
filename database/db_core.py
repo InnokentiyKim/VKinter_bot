@@ -4,7 +4,11 @@ from settings.config import settings
 
 
 class Base(DeclarativeBase):
-    pass
+    def __repr__(self):
+        cols = []
+        for col in self.__table__.columns.keys():
+            cols.append(f"{col} = {getattr(self, col)}")
+        return f"<{self.__class__.__name__} {', '.join(cols)}>"
 
 
 engine = create_engine(url=settings.DSN, echo=True, pool_size=5, max_overflow=2)

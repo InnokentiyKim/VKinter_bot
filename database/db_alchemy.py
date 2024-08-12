@@ -1,40 +1,77 @@
+from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 from database.db_core import Base, Session, engine
-from models.vk_user import VKUser
-from models.favourites import Favourites
-from models.blacklist import BlackList
+from models.vk_user import VKUser, Favourites, BlackList
 
 
 class DBManager:
     def __init__(self):
         self.engine = engine
         self._session = Session()
-        Base.metadata.create_all(engine)
+        Base.metadata.drop_all(self.engine)
+        Base.metadata.create_all(self.engine)
 
     def init_defaults(self):
         with self._session as session:
-            user_1 = VKUser(id=2132423, first_name="Vasya")
-            user_2 = VKUser(id=3523523, first_name="Petya")
-            user_3 = VKUser(id=2352362, first_name="Kolya")
-            session.add_all([user_1, user_2, user_3])
-            session.flush()
-            favourites_1 = Favourites(id=23532423, vk_user_id=user_1.id)
-            favourites_2 = Favourites(id=46532423, vk_user_id=user_1.id)
-            favourites_3 = Favourites(id=67332423, vk_user_id=user_2.id)
-            favourites_4 = Favourites(id=34324243, vk_user_id=user_2.id)
-            favourites_5 = Favourites(id=86722423, vk_user_id=user_2.id)
-            blacked_user_1 = BlackList(id=1115885, user_id=user_1.id)
-            blacked_user_2 = BlackList(id=1658544, user_id=user_2.id)
-            blacked_user_3 = BlackList(id=23532423, user_id=user_2.id)
+            user_1 = VKUser(id=2423532, first_name="Vasya")
+            user_2 = VKUser(id=4363434, first_name="Petya")
+            user_3 = VKUser(id=6324234, first_name="Kolya")
+            favourites_1 = Favourites(id=2352362, vk_user=user_1)
+            favourites_2 = Favourites(id=3904760, vk_user=user_3)
+            favourites_3 = Favourites(id=3985092, vk_user=user_1)
+            favourites_4 = Favourites(id=8743533, vk_user=user_2)
+            blacklist_1 = BlackList(id=984353234, vk_user=user_1)
+            blacklist_2 = BlackList(id=43097503, vk_user=user_2)
+            blacklist_3 = BlackList(id=98945345, vk_user=user_3)
             session.add_all(
                 [
-                    favourites_1,
-                    favourites_2,
-                    favourites_3,
-                    favourites_4,
-                    favourites_5,
-                    blacked_user_1,
-                    blacked_user_2,
-                    blacked_user_3,
+                    user_1, user_2, user_3,
+                    favourites_1, favourites_2, favourites_3, favourites_4,
+                    blacklist_1, blacklist_2, blacklist_3
                 ]
             )
             session.commit()
+
+    def insert_vk_user(self, vk_user_id: int, first_name: str = None) -> bool:
+        try:
+            with self._session as session:
+                session.add(VKUser(id=vk_user_id, first_name=first_name))
+                session.commit()
+                return True
+        except ConnectionError:
+            print("Ошибка подключения к базе данных")
+        return False
+
+    def insert_favourites(self, favourites_id: int, vk_user_id: int) -> bool:
+        try:
+            with self._session as session:
+                session.add(Favourites(id=favourites_id, vk_user_id=vk_user_id))
+                session.commit()
+                return True
+        except ConnectionError:
+            print("Ошибка подключения к базе данных")
+        return False
+
+    def insert_blacklist(self, blacklist_id: int, vk_user_id: int) -> bool:
+        try:
+            with self._session as session:
+                session.add(BlackList(id=blacklist_id, vk_user_id=vk_user_id))
+                session.commit()
+                return True
+        except ConnectionError:
+            print("Ошибка подключения к базе данных")
+        return False
+
+    def select_vk_users_data(self, vk_user_id: int) -> VKUser | None:
+        try:
+            with self._session as session:
+                query = (
+                    select(VKUser).filter(VKUser.id == vk_user_id)
+                    .options(selectinload(VKUser.favourites))
+                    .options(selectinload(VKUser.blacklist))
+                )
+                query_result = session.execute(query).scalars().first()
+                return query_result
+        except ConnectionError:
+            print("Ошибка подключения к базе данных")
+        return None

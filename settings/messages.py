@@ -8,3 +8,8 @@ STICKS = {
     'MISUNDERSTAND': 116,
     'HELP': 121,
 }
+
+MESSAGES = {
+    'START': "Начать",
+    'HELP': "Помощь",
+}
