@@ -51,7 +51,7 @@ class VKCore:
         return users_age - min_lower_age, users_age + max_upper_age
 
     def search_users(self, query: str = '', count: int = settings.SEARCH_LIMIT,
-                     age: int = 20, city: int = 1, sex: int = 1, has_photo: int = 1) -> list:
+                     age: int = 20, city: int = 1, sex: int = 1, has_photo: int = 1) -> dict:
         age_from, age_to = self._get_age_range(age)
         found_users = self.vk.users.search(q=query, count=count, age_from=age_from, age_to=age_to,
                                             has_photo=has_photo, fields=self.fields, city=city, sex=sex)

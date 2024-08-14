@@ -19,6 +19,7 @@ class VKBot:
         self.items_keyboard = Keyboard().get_inline_keyboards(['Добавить в черный список', 'Добавить в избранное'])
         self.vk_core = VKCore(settings.api_token)
         self.current_found_person_index = -1
+        self.current_user = None
         self.found_users = []
 
     def send_chat_msg(self, chat_id, message):
@@ -81,6 +82,19 @@ class VKBot:
         else:
             self.send_msg(favourite_id, "Пользователь уже в избранном")
 
+    def pressed_start(self, event):
+        self.vk_core.get_profiles_info(event.user_id)
+        vk_user = self.vk_core.vk_bot_user
+        self.current_user = self.DB.select_vk_user(event.user_id)
+        if not self.current_user:
+            self.current_user = self.DB.insert_vk_user(event.user_id, vk_user.first_name)
+        self.send_msg(event.user_id, "Идет поиск. Подождите...")
+        search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
+        self.send_msg(event.user_id, f"Поиск завершен. "
+                                     f"Для вас найдено {len(self.found_users)} пользователей:")
+        self.found_users = search_res.get('items')
+        self.send_keyboard(event.user_id, self.working_keyboard)
+
     def start_pooling(self):
         for event in self.longpoll.listen():
             if event.type == VkEventType.MESSAGE_NEW:
@@ -91,14 +105,7 @@ class VKBot:
                         self.send_stick(event.user_id, STICKS['HELLO'])
                         self.send_keyboard(event.user_id, self.start_keyboard)
                     elif request == "начать" or request == "start":
-                        user_profile = self.vk_core.get_profiles_info(event.user_id)
-                        vk_user = self.vk_core.vk_bot_user
-                        self.send_msg(event.user_id, "Идет поиск. Подождите...")
-                        search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
-                        self.send_msg(event.user_id, f"Поиск завершен. "
-                                                     f"Для вас найдено {len(self.found_users)} пользователей:")
-                        self.found_users = search_res.get('items')
-                        self.send_keyboard(event.user_id, self.working_keyboard)
+                        self.pressed_start(event)
                     elif request == "следующий" or request == "next":
                         if self.found_users:
                             self.send_next_found_person(event.user_id, self.found_users)

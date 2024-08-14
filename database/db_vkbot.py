@@ -62,6 +62,18 @@ class DBManager:
             print("Ошибка подключения к базе данных")
         return False
 
+    def select_vk_user(self, vk_user_id: int) -> VKUser | None:
+        try:
+            with self._session as session:
+                query = (
+                    select(VKUser).filter(VKUser.id == vk_user_id)
+                )
+                query_result = session.execute(query).scalars().first()
+                return query_result
+        except ConnectionError:
+            print("Ошибка подключения к базе данных")
+        return None
+
     def select_vk_users_data(self, vk_user_id: int) -> VKUser | None:
         try:
             with self._session as session:
