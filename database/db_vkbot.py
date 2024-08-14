@@ -42,20 +42,20 @@ class DBManager:
             print("Ошибка подключения к базе данных")
         return False
 
-    def insert_favourites(self, favourites_id: int, vk_user_id: int) -> bool:
+    def insert_favourites(self, favourites_id: int, vk_user) -> bool:
         try:
             with self._session as session:
-                session.add(Favourites(id=favourites_id, vk_user_id=vk_user_id))
+                session.add(Favourites(id=favourites_id, vk_user=vk_user))
                 session.commit()
                 return True
         except ConnectionError:
             print("Ошибка подключения к базе данных")
         return False
 
-    def insert_blacklist(self, blacklist_id: int, vk_user_id: int) -> bool:
+    def insert_blacklist(self, blacklist_id: int, vk_user) -> bool:
         try:
             with self._session as session:
-                session.add(BlackList(id=blacklist_id, vk_user_id=vk_user_id))
+                session.add(BlackList(id=blacklist_id, vk_user=vk_user))
                 session.commit()
                 return True
         except ConnectionError:

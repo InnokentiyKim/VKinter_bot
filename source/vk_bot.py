@@ -1,19 +1,22 @@
 from random import randrange
 import vk_api
 from vk_api.longpoll import VkLongPoll, VkEventType
+from database.db_vkbot import DBManager
 from keyboards.keyboard import Keyboard
 from settings.config import settings
 from source.vk_core import VKCore
-from settings.messages import STICKS
+from settings.messages import STICKS, MESSAGES
 
 
 class VKBot:
     def __init__(self):
         self.vk_session = vk_api.VkApi(token=settings.token)
         self.vk = vk_api.VkApi(token=settings.api_token).get_api()
+        self.DB = DBManager()
         self.longpoll = VkLongPoll(vk=self.vk_session, group_id=int(settings.group_id))
         self.start_keyboard = Keyboard().get_keyboards(['Начать', 'Инструкция'], one_time=True)
-        self.working_keyboard = Keyboard().get_keyboards(['Предыдущий', 'Следующий'])
+        self.working_keyboard = Keyboard().get_keyboards(['Меню', 'Избранное', 'Следующий'])
+        self.items_keyboard = Keyboard().get_inline_keyboards(['Добавить в черный список', 'Добавить в избранное'])
         self.vk_core = VKCore(settings.api_token)
         self.current_found_person_index = -1
         self.found_users = []
@@ -27,13 +30,26 @@ class VKBot:
             self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                      'random_id': randrange(10 ** 7), })
         else:
-            attachment = f"photo-{photo_attach[0]}_{photo_attach[1]}" if photo_attach else ""
+            attachment = f"photo {photo_attach[0]}_{photo_attach[1]}" if photo_attach else ""
             self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                      'attachment': attachment, 'random_id': randrange(10 ** 7), })
+
+    def send_photo_msg(self, user_id: int, owner_id: str, photo_id: str, message: str = None):
+        attachment = f"photo{owner_id}_{photo_id}"
+        if message:
+            self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
+                                                     'attachment': attachment, 'random_id': randrange(10 ** 7), })
+        else:
+            self.vk_session.method('messages.send', {'user_id': user_id, 'attachment': attachment,
+                                                     'random_id': randrange(10 ** 7), })
 
     def send_keyboard(self, user_id, keyboard):
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': 'Используйте клавиатуру',
                                                  'keyboard': keyboard, 'random_id': randrange(10 ** 7)})
+
+    def send_inline_keyboard(self, user_id, inline_keyboard):
+        self.vk_session.method('messages.send', {'user_id': user_id, 'keyboard': inline_keyboard,
+                                                 'random_id': randrange(10 ** 7)})
 
     def send_stick(self, user_id, id_stick):
         self.vk_session.method('messages.send', {'user_id': user_id, 'sticker_id': id_stick,
@@ -43,12 +59,27 @@ class VKBot:
         if self.current_found_person_index < len(found_users):
             self.current_found_person_index += 1
             current_user = found_users[self.current_found_person_index]
-            users_photos = self.vk_core.get_users_photos(owner_id=current_user['id'])
-            print(users_photos)
-            self.send_msg(user_id,
-                          f"{current_user['first_name']} {current_user['last_name']}\n "
-                          f"Профиль: https://vk.com/id{current_user['id']}",
-                          send_photo=True, photo_attach=[current_user['id'], current_user['photo_400_orig']])
+            all_users_photos = self.vk_core.get_all_users_photos(owner_id=current_user['id'])
+            best_users_photos = self.vk_core.get_users_best_photos(all_users_photos)
+            print(best_users_photos)
+            self.send_msg(user_id, f"{current_user['first_name']} {current_user['last_name']}\n "
+                                   f"Профиль: https://vk.com/id{current_user['id']}")
+            for user_photo in best_users_photos:
+                self.send_photo_msg(user_id, user_photo['owner_id'], user_photo['id'])
+
+    def add_to_blacklist(self, banned_id: int, bot_user) -> None:
+        adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=bot_user)
+        if adding_result:
+            self.send_msg(banned_id, "Пользователь добавлен в черный список")
+        else:
+            self.send_msg(banned_id, "Пользователь уже в черном списке")
+
+    def add_to_favourites(self, favourite_id: int, bot_user) -> None:
+        adding_result = self.DB.insert_favourites(favourites_id=favourite_id, vk_user=bot_user)
+        if adding_result:
+            self.send_msg(favourite_id, "Пользователь добавлен в избранное")
+        else:
+            self.send_msg(favourite_id, "Пользователь уже в избранном")
 
     def start_pooling(self):
         for event in self.longpoll.listen():
@@ -60,9 +91,12 @@ class VKBot:
                         self.send_stick(event.user_id, STICKS['HELLO'])
                         self.send_keyboard(event.user_id, self.start_keyboard)
                     elif request == "начать" or request == "start":
-                        self.vk_core.get_profiles_info(event.user_id)
+                        user_profile = self.vk_core.get_profiles_info(event.user_id)
                         vk_user = self.vk_core.vk_bot_user
+                        self.send_msg(event.user_id, "Идет поиск. Подождите...")
                         search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
+                        self.send_msg(event.user_id, f"Поиск завершен. "
+                                                     f"Для вас найдено {len(self.found_users)} пользователей:")
                         self.found_users = search_res.get('items')
                         self.send_keyboard(event.user_id, self.working_keyboard)
                     elif request == "следующий" or request == "next":
@@ -73,7 +107,7 @@ class VKBot:
                             self.send_msg(event.user_id, "Начните поиск заново")
                             self.send_keyboard(event.user_id, self.start_keyboard)
                     elif request == "инструкция" or request == "help":
-                        self.send_msg(event.user_id, f"Помощь")
+                        self.send_msg(event.user_id, MESSAGES['HELP'])
                         self.send_stick(event.user_id, STICKS['HELP'])
                     elif request == "пока" or request == "goodbye":
                         self.send_msg(event.user_id, "Пока((")

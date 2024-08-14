@@ -36,7 +36,7 @@ class VKCore:
     def __init__(self, vk_api_token):
         self.vk = vk_api.VkApi(token=vk_api_token).get_api()
         self.vk_bot_user = VKBotUser()
-        self.fields = "bdate,city,contancts,interests,photo_400_orig"
+        self.fields = "bdate,city,contancts,interests"
 
     def get_profiles_info(self, user_id: int) -> bool:
         try:
@@ -57,6 +57,23 @@ class VKCore:
                                             has_photo=has_photo, fields=self.fields, city=city, sex=sex)
         return found_users
 
-    def get_users_photos(self, owner_id: int, album_id: str = 'profile') -> list:
-        photos = self.vk.photos.get(owner_id=owner_id, album_id=album_id, extended=1)
-        return photos
+    def get_all_users_photos(self, owner_id: int, album_id: str = 'profile') -> dict | None:
+        try:
+            photos = self.vk.photos.get(owner_id=owner_id, album_id=album_id, extended=1, photos_sizes=0)
+            return photos
+        except vk_api.exceptions.ApiError:
+            print(f"Error while getting users {owner_id} photos")
+            return None
+
+    def get_users_best_photos(self, found_photos: dict, count: int = 3) -> list[dict]:
+        best_photos = []
+        if found_photos:
+            all_photos = found_photos.get('items')
+            for photo in all_photos:
+                current_photo = {}
+                current_photo['id'] = photo.get('id')
+                current_photo['owner_id'] = photo.get('owner_id')
+                current_photo['likes'] = photo.get('likes').get('count')
+                best_photos.append(current_photo)
+            best_photos.sort(key=lambda x: x['likes'], reverse=True)
+        return best_photos[:count]
