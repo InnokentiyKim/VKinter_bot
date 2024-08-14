@@ -49,8 +49,8 @@ class VKBot:
                                                  'keyboard': keyboard, 'random_id': randrange(10 ** 7)})
 
     def send_inline_keyboard(self, user_id, inline_keyboard):
-        self.vk_session.method('messages.send', {'user_id': user_id, 'keyboard': inline_keyboard,
-                                                 'random_id': randrange(10 ** 7)})
+        self.vk_session.method('messages.send', {'user_id': user_id, 'message': 'Выберите действие:',
+                                                 'keyboard': inline_keyboard,'random_id': randrange(10 ** 7)})
 
     def send_stick(self, user_id, id_stick):
         self.vk_session.method('messages.send', {'user_id': user_id, 'sticker_id': id_stick,
@@ -62,11 +62,13 @@ class VKBot:
             current_user = found_users[self.current_found_person_index]
             all_users_photos = self.vk_core.get_all_users_photos(owner_id=current_user['id'])
             best_users_photos = self.vk_core.get_users_best_photos(all_users_photos)
-            print(best_users_photos)
             self.send_msg(user_id, f"{current_user['first_name']} {current_user['last_name']}\n "
                                    f"Профиль: https://vk.com/id{current_user['id']}")
             for user_photo in best_users_photos:
                 self.send_photo_msg(user_id, user_photo['owner_id'], user_photo['id'])
+            items_keyboard = Keyboard()
+            items_keyboard = items_keyboard.get_inline_keyboards(['Добавить в черный список', 'Добавить в избранное'])
+            self.send_inline_keyboard(user_id, items_keyboard)
 
     def add_to_blacklist(self, banned_id: int, bot_user) -> None:
         adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=bot_user)
@@ -90,9 +92,9 @@ class VKBot:
             self.current_user = self.DB.insert_vk_user(event.user_id, vk_user.first_name)
         self.send_msg(event.user_id, "Идет поиск. Подождите...")
         search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
+        self.found_users = search_res.get('items')
         self.send_msg(event.user_id, f"Поиск завершен. "
                                      f"Для вас найдено {len(self.found_users)} пользователей:")
-        self.found_users = search_res.get('items')
         self.send_keyboard(event.user_id, self.working_keyboard)
 
     def start_pooling(self):
@@ -114,10 +116,10 @@ class VKBot:
                             self.send_msg(event.user_id, "Начните поиск заново")
                             self.send_keyboard(event.user_id, self.start_keyboard)
                     elif request == "инструкция" or request == "help":
-                        self.send_msg(event.user_id, MESSAGES['HELP'])
                         self.send_stick(event.user_id, STICKS['HELP'])
+                        self.send_msg(event.user_id, MESSAGES['HELP'])
                     elif request == "пока" or request == "goodbye":
-                        self.send_msg(event.user_id, "Пока((")
+                        self.send_msg(event.user_id, "Уже выходите?...Пока((")
                         self.send_stick(event.user_id, STICKS['GOODBYE'])
                     else:
                         self.send_msg(event.user_id, "Не понял вашего ответа...")

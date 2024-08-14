@@ -8,29 +8,7 @@ class DBManager:
     def __init__(self):
         self.engine = engine
         self._session = Session()
-        Base.metadata.drop_all(self.engine)
         Base.metadata.create_all(self.engine)
-
-    def init_defaults(self):
-        with self._session as session:
-            user_1 = VKUser(id=2423532, first_name="Vasya")
-            user_2 = VKUser(id=4363434, first_name="Petya")
-            user_3 = VKUser(id=6324234, first_name="Kolya")
-            favourites_1 = Favourites(id=2352362, vk_user=user_1)
-            favourites_2 = Favourites(id=3904760, vk_user=user_3)
-            favourites_3 = Favourites(id=3985092, vk_user=user_1)
-            favourites_4 = Favourites(id=8743533, vk_user=user_2)
-            blacklist_1 = BlackList(id=984353234, vk_user=user_1)
-            blacklist_2 = BlackList(id=43097503, vk_user=user_2)
-            blacklist_3 = BlackList(id=98945345, vk_user=user_3)
-            session.add_all(
-                [
-                    user_1, user_2, user_3,
-                    favourites_1, favourites_2, favourites_3, favourites_4,
-                    blacklist_1, blacklist_2, blacklist_3
-                ]
-            )
-            session.commit()
 
     def insert_vk_user(self, vk_user_id: int, first_name: str = None) -> bool:
         try:
