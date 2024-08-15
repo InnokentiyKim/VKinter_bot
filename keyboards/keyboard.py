@@ -17,12 +17,14 @@ class Keyboard:
             self.keyboard.add_button(label=button, color=color)
         return self.keyboard.get_keyboard()
 
-    def get_inline_keyboards(self, buttons_titles: list[str], color=VkKeyboardColor.SECONDARY, one_time=True):
+    def get_inline_keyboards(self, user_id: int, buttons_titles: list[str], color=VkKeyboardColor.SECONDARY, one_time=True):
         self.inline_keyboard.one_time = one_time
         if len(buttons_titles) == 2:
-            self.inline_keyboard.add_callback_button(label=buttons_titles[0], color=VkKeyboardColor.NEGATIVE)
-            self.inline_keyboard.add_callback_button(label=buttons_titles[1], color=VkKeyboardColor.POSITIVE)
+            self.inline_keyboard.add_button(label=buttons_titles[0], color=VkKeyboardColor.NEGATIVE,
+                                                     payload={"action": "add_to_blacklist", "user_id": user_id})
+            self.inline_keyboard.add_button(label=buttons_titles[1], color=VkKeyboardColor.POSITIVE,
+                                                     payload={"action": "add_to_favorite", "user_id": user_id})
         else:
             for button in buttons_titles:
-                self.inline_keyboard.add_callback_button(label=button, color=color)
+                self.inline_keyboard.add_button(label=button, color=color)
         return self.inline_keyboard.get_keyboard()

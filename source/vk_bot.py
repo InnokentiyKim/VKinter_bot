@@ -1,8 +1,10 @@
+import json
 from random import randrange
 import vk_api
-from vk_api.longpoll import VkLongPoll, VkEventType
+from vk_api.longpoll import VkLongPoll, VkEventType, ALL_EVENT_ATTRS
 from database.db_vkbot import DBManager
 from keyboards.keyboard import Keyboard
+from models.vk_user import VKUser
 from settings.config import settings
 from source.vk_core import VKCore
 from settings.messages import STICKS, MESSAGES
@@ -16,7 +18,6 @@ class VKBot:
         self.longpoll = VkLongPoll(vk=self.vk_session, group_id=int(settings.group_id))
         self.start_keyboard = Keyboard().get_keyboards(['Начать', 'Инструкция'], one_time=True)
         self.working_keyboard = Keyboard().get_keyboards(['Меню', 'Избранное', 'Следующий'])
-        self.items_keyboard = Keyboard().get_inline_keyboards(['Добавить в черный список', 'Добавить в избранное'])
         self.vk_core = VKCore(settings.api_token)
         self.current_found_person_index = -1
         self.current_user = None
@@ -50,7 +51,7 @@ class VKBot:
 
     def send_inline_keyboard(self, user_id, inline_keyboard):
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': 'Выберите действие:',
-                                                 'keyboard': inline_keyboard,'random_id': randrange(10 ** 7)})
+                                                 'keyboard': inline_keyboard, 'random_id': randrange(10 ** 7)})
 
     def send_stick(self, user_id, id_stick):
         self.vk_session.method('messages.send', {'user_id': user_id, 'sticker_id': id_stick,
@@ -59,37 +60,41 @@ class VKBot:
     def send_next_found_person(self, user_id: int, found_users: list[dict]):
         if self.current_found_person_index < len(found_users):
             self.current_found_person_index += 1
-            current_user = found_users[self.current_found_person_index]
-            all_users_photos = self.vk_core.get_all_users_photos(owner_id=current_user['id'])
+            current_found_user = found_users[self.current_found_person_index]
+            all_users_photos = self.vk_core.get_all_users_photos(owner_id=current_found_user['id'])
             best_users_photos = self.vk_core.get_users_best_photos(all_users_photos)
-            self.send_msg(user_id, f"{current_user['first_name']} {current_user['last_name']}\n "
-                                   f"Профиль: https://vk.com/id{current_user['id']}")
+            self.send_msg(user_id, f"{current_found_user['first_name']} {current_found_user['last_name']}\n "
+                                   f"Профиль: https://vk.com/id{current_found_user['id']}")
             for user_photo in best_users_photos:
                 self.send_photo_msg(user_id, user_photo['owner_id'], user_photo['id'])
             items_keyboard = Keyboard()
-            items_keyboard = items_keyboard.get_inline_keyboards(['Добавить в черный список', 'Добавить в избранное'])
+            items_keyboard = items_keyboard.get_inline_keyboards(current_found_user['id'], ['Добавить в черный список', 'Добавить в избранное'])
             self.send_inline_keyboard(user_id, items_keyboard)
+        else:
+            self.send_msg(user_id, "Список найденных пользователей закончился")
 
     def add_to_blacklist(self, banned_id: int, bot_user) -> None:
-        adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=bot_user)
-        if adding_result:
-            self.send_msg(banned_id, "Пользователь добавлен в черный список")
-        else:
-            self.send_msg(banned_id, "Пользователь уже в черном списке")
+        if isinstance(bot_user, VKUser):
+            adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=bot_user)
+            if adding_result:
+                self.send_msg(bot_user.id, f"Пользователь {banned_id} добавлен в черный список")
+            else:
+                self.send_msg(bot_user.id, f"Пользователь {banned_id} уже в черном списке")
 
     def add_to_favourites(self, favourite_id: int, bot_user) -> None:
         adding_result = self.DB.insert_favourites(favourites_id=favourite_id, vk_user=bot_user)
         if adding_result:
-            self.send_msg(favourite_id, "Пользователь добавлен в избранное")
+            self.send_msg(bot_user.id, f"Пользователь {favourite_id} добавлен в избранное")
         else:
-            self.send_msg(favourite_id, "Пользователь уже в избранном")
+            self.send_msg(bot_user.id, f"Пользователь {favourite_id} уже в избранном")
 
     def pressed_start(self, event):
         self.vk_core.get_profiles_info(event.user_id)
         vk_user = self.vk_core.vk_bot_user
         self.current_user = self.DB.select_vk_user(event.user_id)
         if not self.current_user:
-            self.current_user = self.DB.insert_vk_user(event.user_id, vk_user.first_name)
+            self.current_user = VKUser(id=event.user_id, first_name=vk_user.first_name)
+            self.DB.insert_vk_user(self.current_user)
         self.send_msg(event.user_id, "Идет поиск. Подождите...")
         search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
         self.found_users = search_res.get('items')
@@ -102,6 +107,7 @@ class VKBot:
             if event.type == VkEventType.MESSAGE_NEW:
                 if event.to_me:
                     request = event.text.strip().lower()
+                    print(request)
                     if request == "привет" or request == "hello":
                         self.send_msg(event.user_id, f"Привет, {event.user_id}")
                         self.send_stick(event.user_id, STICKS['HELLO'])
@@ -121,6 +127,17 @@ class VKBot:
                     elif request == "пока" or request == "goodbye":
                         self.send_msg(event.user_id, "Уже выходите?...Пока((")
                         self.send_stick(event.user_id, STICKS['GOODBYE'])
+                    elif request == "добавить в избранное":
+                        payload = json.loads(event.extra_values.get('payload'))
+                        if payload:
+                            self.add_to_favourites(payload.get('user_id'), self.current_user)
+                    elif request == "добавить в черный список":
+                        payload = event.extra_values.get('payload')
+                        if payload:
+                            self.add_to_blacklist(payload, self.current_user)
                     else:
                         self.send_msg(event.user_id, "Не понял вашего ответа...")
                         self.send_stick(event.user_id, STICKS['MISUNDERSTAND'])
+
+
+
