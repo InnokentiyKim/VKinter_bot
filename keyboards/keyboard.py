@@ -21,9 +21,9 @@ class Keyboard:
         self.inline_keyboard.one_time = one_time
         if len(buttons_titles) == 2:
             self.inline_keyboard.add_button(label=buttons_titles[0], color=VkKeyboardColor.NEGATIVE,
-                                                     payload={"action": "add_to_blacklist", "user_id": user_id})
+                                            payload={"action": "add_to_blacklist", "user_id": user_id})
             self.inline_keyboard.add_button(label=buttons_titles[1], color=VkKeyboardColor.POSITIVE,
-                                                     payload={"action": "add_to_favorite", "user_id": user_id})
+                                            payload={"action": "add_to_favorite", "user_id": user_id})
         else:
             for button in buttons_titles:
                 self.inline_keyboard.add_button(label=button, color=color)

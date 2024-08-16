@@ -88,7 +88,7 @@ class DBManager:
                     .options(selectinload(VKUser.favourites))
                     .options(selectinload(VKUser.blacklist))
                 )
-                query_result = session.execute(query).scalars().first()
+                query_result = session.execute(query).scalars().all()
                 return query_result
         except ConnectionError:
             print("Ошибка подключения к базе данных")

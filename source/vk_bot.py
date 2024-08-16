@@ -1,7 +1,7 @@
 import json
 from random import randrange
 import vk_api
-from vk_api.longpoll import VkLongPoll, VkEventType, ALL_EVENT_ATTRS
+from vk_api.longpoll import VkLongPoll, VkEventType
 from database.db_vkbot import DBManager
 from keyboards.keyboard import Keyboard
 from models.vk_user import VKUser
@@ -68,27 +68,47 @@ class VKBot:
             for user_photo in best_users_photos:
                 self.send_photo_msg(user_id, user_photo['owner_id'], user_photo['id'])
             items_keyboard = Keyboard()
-            items_keyboard = items_keyboard.get_inline_keyboards(current_found_user['id'], ['Добавить в черный список', 'Добавить в избранное'])
+            items_keyboard = items_keyboard.get_inline_keyboards(
+                current_found_user['id'],
+                ['Добавить в черный список', 'Добавить в избранное'])
             self.send_inline_keyboard(user_id, items_keyboard)
         else:
             self.send_msg(user_id, "Список найденных пользователей закончился")
 
     def add_to_blacklist(self, banned_id: int, bot_user) -> None:
-        if isinstance(bot_user, VKUser):
-            adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=bot_user)
-            if adding_result:
-                self.send_msg(bot_user.id, f"Пользователь {banned_id} добавлен в черный список")
-            else:
-                self.send_msg(bot_user.id, f"Пользователь {banned_id} уже в черном списке")
+        user = self.DB.select_vk_user(bot_user.id)
+        adding_result = self.DB.insert_blacklist(blacklist_id=banned_id, vk_user=user)
+        if adding_result:
+            self.send_msg(bot_user.id, f"Пользователь {banned_id} добавлен в черный список")
+        else:
+            self.send_msg(bot_user.id, f"Пользователь {banned_id} уже в черном списке")
 
     def add_to_favourites(self, favourite_id: int, bot_user) -> None:
-        adding_result = self.DB.insert_favourites(favourites_id=favourite_id, vk_user=bot_user)
+        user = self.DB.select_vk_user(bot_user.id)
+        adding_result = self.DB.insert_favourites(favourites_id=favourite_id, vk_user=user)
         if adding_result:
             self.send_msg(bot_user.id, f"Пользователь {favourite_id} добавлен в избранное")
         else:
             self.send_msg(bot_user.id, f"Пользователь {favourite_id} уже в избранном")
 
+    def get_favourites(self, bot_user_id):
+        users_data = self.DB.select_vk_users_data(bot_user_id)
+        users_data = users_data[0]
+        favourites = [favourite.id for favourite in users_data.favourites]
+        favourites = ", ".join(map(str, favourites))
+        return favourites
+
+    def pressed_show_favourites(self, event):
+        favourites = self.get_favourites(event.user_id)
+        self.send_msg(event.user_id, f"Ваши избранные пользователи: {favourites}")
+        self.send_keyboard(event.user_id, self.working_keyboard)
+
+    def pressed_show_menu(self, event):
+        self.send_msg(event.user_id, f"Вы вошли в меню")
+        self.send_keyboard(event.user_id, self.working_keyboard)
+
     def pressed_start(self, event):
+        self.current_found_person_index = -1
         self.vk_core.get_profiles_info(event.user_id)
         vk_user = self.vk_core.vk_bot_user
         self.current_user = self.DB.select_vk_user(event.user_id)
@@ -96,11 +116,12 @@ class VKBot:
             self.current_user = VKUser(id=event.user_id, first_name=vk_user.first_name)
             self.DB.insert_vk_user(self.current_user)
         self.send_msg(event.user_id, "Идет поиск. Подождите...")
-        search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id)
+        search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id, sex=vk_user.sex)
         self.found_users = search_res.get('items')
         self.send_msg(event.user_id, f"Поиск завершен. "
                                      f"Для вас найдено {len(self.found_users)} пользователей:")
         self.send_keyboard(event.user_id, self.working_keyboard)
+        self.send_next_found_person(event.user_id, self.found_users)
 
     def start_pooling(self):
         for event in self.longpoll.listen():
@@ -114,6 +135,8 @@ class VKBot:
                         self.send_keyboard(event.user_id, self.start_keyboard)
                     elif request == "начать" or request == "start":
                         self.pressed_start(event)
+                        if self.found_users:
+                            self.send_next_found_person(event.user_id, self.found_users)
                     elif request == "следующий" or request == "next":
                         if self.found_users:
                             self.send_next_found_person(event.user_id, self.found_users)
@@ -127,17 +150,18 @@ class VKBot:
                     elif request == "пока" or request == "goodbye":
                         self.send_msg(event.user_id, "Уже выходите?...Пока((")
                         self.send_stick(event.user_id, STICKS['GOODBYE'])
+                    elif request == "избранное" or request == "favourites":
+                        self.pressed_show_favourites(event)
+                    elif request == "меню" or request == "menu":
+                        self.pressed_show_menu(event)
                     elif request == "добавить в избранное":
                         payload = json.loads(event.extra_values.get('payload'))
                         if payload:
                             self.add_to_favourites(payload.get('user_id'), self.current_user)
                     elif request == "добавить в черный список":
-                        payload = event.extra_values.get('payload')
+                        payload = json.loads(event.extra_values.get('payload'))
                         if payload:
-                            self.add_to_blacklist(payload, self.current_user)
+                            self.add_to_blacklist(payload.get('user_id'), self.current_user)
                     else:
                         self.send_msg(event.user_id, "Не понял вашего ответа...")
                         self.send_stick(event.user_id, STICKS['MISUNDERSTAND'])
-
-
-

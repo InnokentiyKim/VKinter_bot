@@ -18,11 +18,13 @@ class VKCore:
             print(f"Error while getting users {user_id} profile info")
             return False
 
-    def _get_age_range(self, users_age: int, min_lower_age: int = 2, max_upper_age: int = 2) -> tuple:
+    @staticmethod
+    def _get_age_range(users_age: int, min_lower_age: int = 2, max_upper_age: int = 2) -> tuple:
         return users_age - min_lower_age, users_age + max_upper_age
 
     def search_users(self, query: str = '', count: int = settings.SEARCH_LIMIT,
                      age: int = 20, city: int = 1, sex: int = 1, has_photo: int = 1) -> dict:
+        sex = 2 if sex == 1 else 1
         age_from, age_to = self._get_age_range(age)
         found_users = self.vk.users.search(q=query, count=count, age_from=age_from, age_to=age_to,
                                             has_photo=has_photo, fields=self.fields, city=city, sex=sex)
