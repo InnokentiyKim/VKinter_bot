@@ -1,12 +1,15 @@
-from source.vk_bot import VKBot
-from database.db_vkbot import DBManager
+from source.vk_bot_main import VKBot
 
 
 def main():
-    vk_bot = VKBot()
-    DB = DBManager()
-    print("Бот запущен...")
-    vk_bot.start_pooling()
+    while True:
+        try:
+            vk_bot = VKBot()
+            print("Бот запущен...")
+            vk_bot.start_pooling()
+        except Exception:
+            print("Ошибка в работе бота. Перезапускаю...")
+            continue
 
 
 if __name__ == '__main__':

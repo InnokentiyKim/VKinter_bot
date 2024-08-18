@@ -10,5 +10,6 @@ class VKUser(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     first_name: Mapped[Optional[str]] = mapped_column(default=f"user {id}")
+    last_name: Mapped[Optional[str]] = mapped_column()
     favourites: Mapped[list['Favourites']] = relationship(back_populates='vk_user')
     blacklist: Mapped[list['BlackList']] = relationship(back_populates='vk_user')

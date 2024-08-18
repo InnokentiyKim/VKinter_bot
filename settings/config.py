@@ -42,13 +42,16 @@ settings = Settings()
 
 COMMANDS = {
     'START': 'начать',
+    'HELLO': 'привет',
+    'GOODBYE': 'пока',
     'HELP': 'инструкция',
-    'MENU': 'меню',
+    'CONFIG': 'настройки',
     'NEXT': 'следующий',
-    'FAVOURITES': 'добавить в избранное',
-    'BLACKLIST': 'добавить в черный список',
+    'TO_FAVOURITES': 'добавить в избранное',
+    'TO_BLACKLIST': 'добавить в черный список',
+    'SHOW_FAVOURITES': 'избранное',
 }
 
-GENDER = {'любой': 0, 'женщина': 1, 'мужчина': 2, }
+GENDER = {'ANY': 0, 'WOMAN': 1, 'MAN': 2, }
 STATUS = {'NOT_MERRIED': 1, 'DATING': 2, 'ENGAGED': 3, 'MERRIED': 4, 'COMPLICATED': 5,
           'ACTIVE': 6, 'IN_LOVE': 7, 'MERRIED_OFF': 8, }

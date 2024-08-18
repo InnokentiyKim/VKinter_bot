@@ -1,8 +1,7 @@
 from sqlalchemy.orm import selectinload
-from sqlalchemy import select, insert
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import DetachedInstanceError
-
 from database.db_core import Base, Session, engine
 from models.vk_user import VKUser, Favourites, BlackList
 
@@ -22,7 +21,7 @@ class DBManager:
                         return True
             except ConnectionError:
                 print("Ошибка подключения к базе данных")
-            except IntegrityError as dublicate_error:
+            except IntegrityError:
                 print('Ошибка. Попытка добавить дубликат')
             except DetachedInstanceError:
                 print('Ошибка. Попытка добавить несуществующую запись')
@@ -30,43 +29,45 @@ class DBManager:
                 print(error)
         return False
 
-    def insert_favourites(self, favourites_id: int, vk_user) -> bool:
+    def insert_favourites(self, favourites: dict, vk_user: VKUser) -> bool | None:
         if isinstance(vk_user, VKUser):
             try:
                 with self._session as session:
-                    session.add(Favourites(id=favourites_id, vk_user=vk_user))
+                    session.add(
+                        Favourites(id=favourites['user_id'], first_name=favourites['first_name'],
+                                   last_name=favourites['last_name'],  vk_user=vk_user))
                     session.commit()
                     return True
             except ConnectionError:
                 print("Ошибка подключения к базе данных")
-                return False
-            except IntegrityError as dublicate_error:
+            except IntegrityError:
                 print('Ошибка. Попытка добавить дубликат')
                 return False
             except DetachedInstanceError:
                 print('Ошибка. Попытка добавить несуществующую запись')
-                return False
             except Exception as error:
                 print(error)
-                return False
-        return False
+        return None
 
-    def insert_blacklist(self, blacklist_id: int, vk_user) -> bool:
+    def insert_blacklist(self, banned: dict, vk_user) -> bool | None:
         if isinstance(vk_user, VKUser):
             try:
                 with self._session as session:
-                    session.add(BlackList(id=blacklist_id, vk_user=vk_user))
+                    session.add(
+                        BlackList(id=banned['user_id'], first_name=banned['first_name'],
+                                  last_name=banned['last_name'], vk_user=vk_user))
                     session.commit()
                     return True
             except ConnectionError:
                 print("Ошибка подключения к базе данных")
-            except IntegrityError as dublicate_error:
+            except IntegrityError:
                 print('Ошибка. Попытка добавить дубликат')
+                return False
             except DetachedInstanceError:
                 print('Ошибка. Попытка добавить несуществующую запись')
             except Exception as error:
                 print(error)
-        return False
+        return None
 
     def select_vk_user(self, vk_user_id: int) -> VKUser | None:
         try:
@@ -88,7 +89,7 @@ class DBManager:
                     .options(selectinload(VKUser.favourites))
                     .options(selectinload(VKUser.blacklist))
                 )
-                query_result = session.execute(query).scalars().all()
+                query_result = session.execute(query).scalars().first()
                 return query_result
         except ConnectionError:
             print("Ошибка подключения к базе данных")

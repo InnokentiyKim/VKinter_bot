@@ -1,5 +1,5 @@
 import vk_api
-from settings.config import settings
+from settings.config import settings, STATUS
 from source.vk_entity import VKBotUser, VKFoundUser
 
 
@@ -7,15 +7,15 @@ class VKCore:
     def __init__(self, vk_api_token):
         self.vk = vk_api.VkApi(token=vk_api_token).get_api()
         self.vk_bot_user = VKBotUser()
-        self.fields = "bdate,city,contancts,interests"
+        self.fields = "bdate,city,contancts,interests,is_closed"
 
     def get_profiles_info(self, user_id: int) -> bool:
         try:
             info = self.vk.account.getProfileInfo(user_id=user_id)
             self.vk_bot_user.set_vk_user(user_id, info)
             return True
-        except vk_api.exceptions.ApiError:
-            print(f"Error while getting users {user_id} profile info")
+        except vk_api.exceptions.ApiError as ApiError:
+            print(f"Error while getting users {user_id} profile info. {ApiError}")
             return False
 
     @staticmethod
@@ -27,18 +27,23 @@ class VKCore:
         sex = 2 if sex == 1 else 1
         age_from, age_to = self._get_age_range(age)
         found_users = self.vk.users.search(q=query, count=count, age_from=age_from, age_to=age_to,
-                                            has_photo=has_photo, fields=self.fields, city=city, sex=sex)
+                                           has_photo=has_photo, fields=self.fields, city=city, sex=sex)
         return found_users
 
-    def get_all_users_photos(self, owner_id: int, album_id: str = 'profile') -> dict | None:
+    def get_users_photos(self, owner_id: int, album_id: str = 'profile', is_closed: bool = False) -> list[dict] | None:
         try:
-            photos = self.vk.photos.get(owner_id=owner_id, album_id=album_id, extended=1, photos_sizes=0)
-            return photos
+            if not is_closed:
+                photos = self.vk.photos.get(owner_id=owner_id, album_id=album_id, extended=1, photos_sizes=0)
+                best_photos = self._get_best_photos(photos)
+                return best_photos
+            else:
+                return None
         except vk_api.exceptions.ApiError:
             print(f"Error while getting users {owner_id} photos")
             return None
 
-    def get_users_best_photos(self, found_photos: dict, count: int = 3) -> list[dict]:
+    @staticmethod
+    def _get_best_photos(found_photos: dict, count: int = 3) -> list[dict]:
         best_photos = []
         if found_photos:
             all_photos = found_photos.get('items')
