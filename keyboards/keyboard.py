@@ -40,3 +40,9 @@ class Keyboard:
                 if i == 1:
                     settings_keyboard.add_line()
         return settings_keyboard.get_keyboard()
+
+    @staticmethod
+    def get_new_search_keyboard(button_title: str, color=VkKeyboardColor.SECONDARY):
+        keyboard = VkKeyboard(inline=True)
+        keyboard.add_button(label=button_title, color=color)
+        return keyboard.get_keyboard()

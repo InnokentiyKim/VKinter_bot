@@ -54,6 +54,7 @@ COMMANDS = {
     'INCREASE_AGE': 'поднять возраст поиска',
     'IGNORE_BLACKLIST': 'игнорировать черный список',
     'RESET_SETTINGS': 'сбросить все настройки',
+    'NEW_SEARCH': 'начать новый поиск',
     'ABOUT': 'о боте',
 }
 

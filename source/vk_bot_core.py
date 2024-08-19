@@ -29,11 +29,17 @@ class BotSettings:
     def get_ages(self) -> tuple:
         return self.age_from, self.age_to
 
+    def decrease_age_from(self, age: int = 1):
+        self.age_from -= age
+
+    def increase_age_to(self, age: int = 1):
+        self.age_to += age
+
     def set_ages(self, age_from, age_to) -> None:
         self.age_from = age_from
         self.age_to = age_to
 
-    def set_use_blacklist(self) -> None:
+    def switch_use_blacklist(self) -> None:
         if self.use_blacklist:
             self.use_blacklist = False
         else:
@@ -45,7 +51,7 @@ class BotSettings:
         if self.age_to > MAX_AGE:
             self.age_to = MAX_AGE
 
-    def reset_settings(self, user_age: int, diff: int = 1) -> None:
+    def reset_settings(self, user_age: int = 20, diff: int = 1) -> None:
         self.age_from = user_age - diff
         self.age_to = user_age + diff
         self.use_blacklist = True

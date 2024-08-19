@@ -27,6 +27,9 @@ class VKBot:
     def pressed_start(self, event):
         self.bot_func.starting_actions(event.user_id)
 
+    def pressed_new_search(self, event):
+        self.bot_func.starting_actions(event.user_id, use_new_settings=True)
+
     def pressed_next(self, event):
         if self.bot_func.found_users:
             self.bot_func.send_next_found_person(event.user_id, self.bot_func.found_users)
@@ -57,16 +60,16 @@ class VKBot:
         self.bot_func.send_msg(event.user_id, MESSAGES['ABOUT'])
 
     def pressed_settings_increase_age(self, event):
-        pass
+        self.bot_func.settings_increase_age(event.user_id)
 
     def pressed_settings_decrease_age(self, event):
-        pass
+        self.bot_func.settings_decrease_age(event.user_id)
 
     def pressed_settings_ignore_blacklist(self, event):
-        pass
+        self.bot_func.settings_ignore_blacklist(event.user_id)
 
     def pressed_settings_reset(self, event):
-        pass
+        self.bot_func.settings_reset(event.user_id)
 
     def unknown_command(self, event):
         self.bot_func.send_msg(event.user_id, "Не понял вашего ответа...")
@@ -106,5 +109,7 @@ class VKBot:
                     self.pressed_settings_ignore_blacklist(event)
                 elif request == COMMANDS['RESET_SETTINGS']:
                     self.pressed_settings_reset(event)
+                elif request == COMMANDS['NEW_SEARCH']:
+                    self.pressed_new_search(event)
                 else:
                     self.unknown_command(event)

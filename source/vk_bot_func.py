@@ -15,6 +15,7 @@ class VKBotFunc:
         self.DB = DBManager()
         self.start_keyboard = Keyboard().get_keyboards(['Начать', 'Инструкция'], one_time=True)
         self.working_keyboard = Keyboard().get_keyboards(['Настройки', 'Избранное', 'Следующий'])
+        self.new_search_keyboard = Keyboard().get_new_search_keyboard('Начать новый поиск')
         self.vk_core = VKCore(settings.api_token)
         self.bot_settings = BotSettings()
         self.found_person_index = -1
@@ -47,8 +48,8 @@ class VKBotFunc:
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                  'keyboard': keyboard, 'random_id': randrange(10 ** 7)})
 
-    def send_inline_keyboard(self, user_id, inline_keyboard):
-        self.vk_session.method('messages.send', {'user_id': user_id, 'message': 'Выберите действие:',
+    def send_inline_keyboard(self, user_id, inline_keyboard, message: str = 'Выберите действие:'):
+        self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                  'keyboard': inline_keyboard, 'random_id': randrange(10 ** 7)})
 
     def send_stick(self, user_id, id_stick):
@@ -59,20 +60,17 @@ class VKBotFunc:
         while self.found_person_index < len(found_users):
             self.found_person_index += 1
             found_user = found_users[self.found_person_index]
+            if 'relation' in found_user:
+                if found_user['relation'] not in STATUS.values():
+                    continue
             if not found_user['is_closed']:
                 if self.current_user and self.bot_settings.use_blacklist:
                     if self.current_user.blacklist:
                         blacklist_ids = [blacklist.id for blacklist in self.current_user.blacklist]
                         if found_user['id'] in blacklist_ids:
                             continue
-                    if 'relation' in found_user:
-                        if found_user['relation'] not in STATUS.values():
-                            continue
                     return found_user
                 else:
-                    if 'relation' in found_user:
-                        if found_user['relation'] not in STATUS.keys():
-                            continue
                     return found_user
         return None
 
@@ -88,7 +86,6 @@ class VKBotFunc:
 
     def send_next_found_person(self, user_id: int, found_users: list[dict]):
         found_user = self._find_next_suitable_profile(found_users)
-        print(found_user)
         if found_user:
             self._form_user_card(user_id, found_user)
         else:
@@ -149,7 +146,7 @@ class VKBotFunc:
         )
         self.send_keyboard(user_id, settings_keyboard, 'Настройки поиска')
 
-    def starting_actions(self, user_id: int) -> None:
+    def starting_actions(self, user_id: int, use_new_settings: bool = False) -> None:
         self.found_person_index = -1
         self.vk_core.get_profiles_info(user_id)
         vk_user = self.vk_core.vk_bot_user
@@ -159,9 +156,41 @@ class VKBotFunc:
             self.DB.insert_vk_user(self.current_user)
             self.current_user = self.DB.select_vk_users_data(user_id)
         self.send_msg(user_id, "Идет поиск. Подождите...")
-        self.bot_settings.reset_settings(vk_user.age)
+        if not use_new_settings:
+            self.bot_settings.reset_settings(vk_user.age)
         search_res = self.vk_core.search_users(age_from=self.bot_settings.age_from, age_to=self.bot_settings.age_to,
                                                city=vk_user.city_id, sex=vk_user.sex)
         self.found_users = search_res.get('items')
         self.send_keyboard(user_id, self.working_keyboard)
         self.send_next_found_person(user_id, self.found_users)
+
+    def settings_increase_age(self, user_id: int) -> None:
+        self.bot_settings.increase_age_to()
+        self.bot_settings.correct_age_range()
+        self.send_msg(user_id, f"Диапазон поиска: "
+                               f"от {self.bot_settings.age_from} до {self.bot_settings.age_to}")
+        self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
+
+    def settings_decrease_age(self, user_id) -> None:
+        self.bot_settings.decrease_age_from()
+        self.bot_settings.correct_age_range()
+        self.send_msg(user_id, f"Диапазон поиска: "
+                               f"от {self.bot_settings.age_from} до {self.bot_settings.age_to}")
+        self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
+
+    def settings_ignore_blacklist(self, user_id) -> None:
+        self.bot_settings.switch_use_blacklist()
+        if self.bot_settings.use_blacklist:
+            self.send_msg(user_id, "Блэклист включен")
+        else:
+            self.send_msg(user_id, "Блэклист выключен")
+        self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
+
+    def settings_reset(self, user_id) -> None:
+        age = self.vk_core.vk_bot_user.age
+        if age:
+            self.bot_settings.reset_settings(age)
+        else:
+            self.bot_settings.reset_settings()
+        self.send_msg(user_id, "Настройки сброшены")
+        self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
