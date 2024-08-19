@@ -1,13 +1,14 @@
 import vk_api
-from settings.config import settings, STATUS
+from settings.config import settings, GENDER
 from source.vk_entity import VKBotUser, VKFoundUser
+from source.vk_bot_core import BotSettings
 
 
 class VKCore:
     def __init__(self, vk_api_token):
         self.vk = vk_api.VkApi(token=vk_api_token).get_api()
         self.vk_bot_user = VKBotUser()
-        self.fields = "bdate,city,contancts,interests,is_closed"
+        self.fields = "bdate,city,contancts,interests,relation,is_closed"
 
     def get_profiles_info(self, user_id: int) -> bool:
         try:
@@ -23,9 +24,8 @@ class VKCore:
         return users_age - min_lower_age, users_age + max_upper_age
 
     def search_users(self, query: str = '', count: int = settings.SEARCH_LIMIT,
-                     age: int = 20, city: int = 1, sex: int = 1, has_photo: int = 1) -> dict:
-        sex = 2 if sex == 1 else 1
-        age_from, age_to = self._get_age_range(age)
+                     age_from: int = 20, age_to: int = 22, city: int = 1, sex: int = 1, has_photo: int = 1) -> dict:
+        sex = GENDER['MAN'] if sex == GENDER['WOMAN'] else GENDER['WOMAN']
         found_users = self.vk.users.search(q=query, count=count, age_from=age_from, age_to=age_to,
                                            has_photo=has_photo, fields=self.fields, city=city, sex=sex)
         return found_users

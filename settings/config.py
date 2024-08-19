@@ -50,8 +50,13 @@ COMMANDS = {
     'TO_FAVOURITES': 'добавить в избранное',
     'TO_BLACKLIST': 'добавить в черный список',
     'SHOW_FAVOURITES': 'избранное',
+    'DECREASE_AGE': 'снизить возраст поиска',
+    'INCREASE_AGE': 'поднять возраст поиска',
+    'IGNORE_BLACKLIST': 'игнорировать черный список',
+    'RESET_SETTINGS': 'сбросить все настройки',
+    'ABOUT': 'о боте',
 }
 
 GENDER = {'ANY': 0, 'WOMAN': 1, 'MAN': 2, }
-STATUS = {'NOT_MERRIED': 1, 'DATING': 2, 'ENGAGED': 3, 'MERRIED': 4, 'COMPLICATED': 5,
-          'ACTIVE': 6, 'IN_LOVE': 7, 'MERRIED_OFF': 8, }
+STATUS = {'NOT_MERRIED': 1, 'COMPLICATED': 5,
+          'ACTIVE': 6, 'MERRIED_OFF': 8, }

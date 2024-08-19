@@ -29,7 +29,8 @@ class Keyboard:
                 self.inline_keyboard.add_button(label=button, color=color)
         return self.inline_keyboard.get_keyboard()
 
-    def get_settings_keyboard(self, user_id: int, buttons_titles: list[str],
+    @staticmethod
+    def get_settings_keyboard(user_id: int, buttons_titles: list[str],
                               actions: list[str], color=VkKeyboardColor.PRIMARY):
         settings_keyboard = VkKeyboard(inline=True)
         if len(buttons_titles) == len(actions):

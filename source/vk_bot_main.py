@@ -1,5 +1,6 @@
 import json
-from vk_api.longpoll import VkLongPoll, VkEventType
+from source.vk_bot_core import CoreVkLongPoll
+from vk_api.longpoll import VkEventType
 from settings.config import settings, COMMANDS
 from source.vk_bot_func import VKBotFunc
 from settings.messages import STICKS, MESSAGES
@@ -8,7 +9,7 @@ from settings.messages import STICKS, MESSAGES
 class VKBot:
     def __init__(self):
         self.bot_func = VKBotFunc()
-        self.longpoll = VkLongPoll(vk=self.bot_func.vk_session, group_id=int(settings.group_id))
+        self.longpoll = CoreVkLongPoll(vk=self.bot_func.vk_session, group_id=int(settings.group_id))
 
     def pressed_hello(self, event):
         self.bot_func.send_msg(event.user_id, f"Привет, {event.user_id}")
@@ -52,6 +53,21 @@ class VKBot:
     def pressed_settings(self, event):
         self.bot_func.get_settings(event.user_id)
 
+    def pressed_about(self, event):
+        self.bot_func.send_msg(event.user_id, MESSAGES['ABOUT'])
+
+    def pressed_settings_increase_age(self, event):
+        pass
+
+    def pressed_settings_decrease_age(self, event):
+        pass
+
+    def pressed_settings_ignore_blacklist(self, event):
+        pass
+
+    def pressed_settings_reset(self, event):
+        pass
+
     def unknown_command(self, event):
         self.bot_func.send_msg(event.user_id, "Не понял вашего ответа...")
         self.bot_func.send_stick(event.user_id, STICKS['MISUNDERSTAND'])
@@ -78,5 +94,17 @@ class VKBot:
                     self.pressed_to_favourites(event)
                 elif request == COMMANDS['TO_BLACKLIST']:
                     self.pressed_to_blacklist(event)
+                elif request == COMMANDS['TO_BLACKLIST']:
+                    self.pressed_to_blacklist(event)
+                elif request == COMMANDS['ABOUT']:
+                    self.pressed_about(event)
+                elif request == COMMANDS['INCREASE_AGE']:
+                    self.pressed_settings_increase_age(event)
+                elif request == COMMANDS['DECREASE_AGE']:
+                    self.pressed_settings_decrease_age(event)
+                elif request == COMMANDS['IGNORE_BLACKLIST']:
+                    self.pressed_settings_ignore_blacklist(event)
+                elif request == COMMANDS['RESET_SETTINGS']:
+                    self.pressed_settings_reset(event)
                 else:
                     self.unknown_command(event)

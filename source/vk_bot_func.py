@@ -3,7 +3,8 @@ import vk_api
 from database.db_vkbot import DBManager
 from keyboards.keyboard import Keyboard
 from models.vk_user import VKUser
-from settings.config import settings
+from settings.config import settings, STATUS, COMMANDS
+from source.vk_bot_core import BotSettings
 from source.vk_core import VKCore
 
 
@@ -15,8 +16,8 @@ class VKBotFunc:
         self.start_keyboard = Keyboard().get_keyboards(['Начать', 'Инструкция'], one_time=True)
         self.working_keyboard = Keyboard().get_keyboards(['Настройки', 'Избранное', 'Следующий'])
         self.vk_core = VKCore(settings.api_token)
+        self.bot_settings = BotSettings()
         self.found_person_index = -1
-        self.use_blacklist = True
         self.current_user = None
         self.found_users = []
 
@@ -54,16 +55,24 @@ class VKBotFunc:
         self.vk_session.method('messages.send', {'user_id': user_id, 'sticker_id': id_stick,
                                                  'random_id': randrange(10 ** 7), })
 
-    def _find_next_open_profile(self, found_users: list[dict]) -> dict | None:
+    def _find_next_suitable_profile(self, found_users: list[dict]) -> dict | None:
         while self.found_person_index < len(found_users):
             self.found_person_index += 1
             found_user = found_users[self.found_person_index]
-            if self.current_user.blacklist and self.use_blacklist:
-                blacklist_ids = [blacklist.id for blacklist in self.current_user.blacklist]
-                if not found_user['is_closed'] and found_user['id'] not in blacklist_ids:
+            if not found_user['is_closed']:
+                if self.current_user and self.bot_settings.use_blacklist:
+                    if self.current_user.blacklist:
+                        blacklist_ids = [blacklist.id for blacklist in self.current_user.blacklist]
+                        if found_user['id'] in blacklist_ids:
+                            continue
+                    if 'relation' in found_user:
+                        if found_user['relation'] not in STATUS.values():
+                            continue
                     return found_user
-            else:
-                if not found_user['is_closed']:
+                else:
+                    if 'relation' in found_user:
+                        if found_user['relation'] not in STATUS.keys():
+                            continue
                     return found_user
         return None
 
@@ -78,7 +87,8 @@ class VKBotFunc:
         self.send_inline_keyboard(user_id, items_keyboard)
 
     def send_next_found_person(self, user_id: int, found_users: list[dict]):
-        found_user = self._find_next_open_profile(found_users)
+        found_user = self._find_next_suitable_profile(found_users)
+        print(found_user)
         if found_user:
             self._form_user_card(user_id, found_user)
         else:
@@ -100,7 +110,7 @@ class VKBotFunc:
     def add_to_favourites(self, payload: dict, bot_user) -> None:
         user = self.DB.select_vk_user(bot_user.id)
         adding_result = self.DB.insert_favourites(favourites=payload, vk_user=user)
-        if adding_result:
+        if adding_result is True:
             self.send_msg(bot_user.id, f"Пользователь {(payload['user_id'])} "
                                        f"{payload['first_name']} {payload['last_name']} добавлен(-а) в избранное")
         elif adding_result is False:
@@ -126,10 +136,11 @@ class VKBotFunc:
         settings_keyboard = Keyboard().get_settings_keyboard(
             user_id=user_id,
             buttons_titles=[
-                'Снизить возраст поиска -2 года',
-                'Поднять возраст поиска +2 года',
-                'Не учитывать черный список',
-                'Сбросить все настройки'],
+                COMMANDS['DECREASE_AGE'],
+                COMMANDS['INCREASE_AGE'],
+                COMMANDS['IGNORE_BLACKLIST'],
+                COMMANDS['RESET_SETTINGS']
+                ],
             actions=[
                 'age_down',
                 'age_up',
@@ -146,8 +157,11 @@ class VKBotFunc:
         if not self.current_user:
             self.current_user = VKUser(id=user_id, first_name=vk_user.first_name, last_name=vk_user.last_name)
             self.DB.insert_vk_user(self.current_user)
+            self.current_user = self.DB.select_vk_users_data(user_id)
         self.send_msg(user_id, "Идет поиск. Подождите...")
-        search_res = self.vk_core.search_users(age=vk_user.age, city=vk_user.city_id, sex=vk_user.sex)
+        self.bot_settings.reset_settings(vk_user.age)
+        search_res = self.vk_core.search_users(age_from=self.bot_settings.age_from, age_to=self.bot_settings.age_to,
+                                               city=vk_user.city_id, sex=vk_user.sex)
         self.found_users = search_res.get('items')
         self.send_keyboard(user_id, self.working_keyboard)
         self.send_next_found_person(user_id, self.found_users)
