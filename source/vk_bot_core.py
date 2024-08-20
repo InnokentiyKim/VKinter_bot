@@ -1,5 +1,6 @@
 from vk_api.longpoll import VkLongPoll
 from time import sleep
+from bot_logging.bot_logging import error_logger
 
 TIMEOUT = 5
 MIN_AGE = 16
@@ -15,7 +16,7 @@ class CoreVkLongPoll(VkLongPoll):
                 for event in self.check():
                     yield event
             except Exception as error:
-                print(error)
+                error_logger.error(error)
                 sleep(TIMEOUT)
                 continue
 

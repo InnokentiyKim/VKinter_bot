@@ -1,4 +1,5 @@
 from source.vk_bot_main import VKBot
+from bot_logging.bot_logging import error_logger
 
 
 def main():
@@ -8,8 +9,7 @@ def main():
             print("Бот запущен...")
             vk_bot.start_pooling()
         except Exception as error:
-            print(error)
-            print("Перезапуск бота...")
+            error_logger.error(error)
             continue
 
 

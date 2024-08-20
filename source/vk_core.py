@@ -1,7 +1,7 @@
 import vk_api
 from settings.config import settings, GENDER
-from source.vk_entity import VKBotUser, VKFoundUser
-from source.vk_bot_core import BotSettings
+from source.vk_entity import VKBotUser
+from bot_logging.bot_logging import error_logger, bot_exception_logger, LOGGER_PATH
 
 
 class VKCore:
@@ -15,14 +15,15 @@ class VKCore:
             info = self.vk.account.getProfileInfo(user_id=user_id)
             self.vk_bot_user.set_vk_user(user_id, info)
             return True
-        except vk_api.exceptions.ApiError as ApiError:
-            print(f"Error while getting users {user_id} profile info. {ApiError}")
+        except Exception as error:
+            error_logger.error(error)
             return False
 
     @staticmethod
     def _get_age_range(users_age: int, min_lower_age: int = 2, max_upper_age: int = 2) -> tuple:
         return users_age - min_lower_age, users_age + max_upper_age
 
+    @bot_exception_logger(LOGGER_PATH)
     def search_users(self, query: str = '', count: int = settings.SEARCH_LIMIT,
                      age_from: int = 20, age_to: int = 22, city: int = 1, sex: int = 1, has_photo: int = 1) -> dict:
         sex = GENDER['MAN'] if sex == GENDER['WOMAN'] else GENDER['WOMAN']
@@ -38,8 +39,8 @@ class VKCore:
                 return best_photos
             else:
                 return None
-        except vk_api.exceptions.ApiError:
-            print(f"Error while getting users {owner_id} photos")
+        except Exception as error:
+            error_logger.error(error)
             return None
 
     @staticmethod

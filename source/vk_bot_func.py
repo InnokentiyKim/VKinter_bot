@@ -6,6 +6,7 @@ from models.vk_user import VKUser
 from settings.config import settings, STATUS, COMMANDS
 from source.vk_bot_core import BotSettings
 from source.vk_core import VKCore
+from bot_logging.bot_logging import error_logger, bot_exception_logger, LOGGER_PATH
 
 
 class VKBotFunc:
@@ -84,6 +85,7 @@ class VKBotFunc:
             found_user, ['Добавить в черный список', 'Добавить в избранное'])
         self.send_inline_keyboard(user_id, items_keyboard)
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def send_next_found_person(self, user_id: int, found_users: list[dict]):
         found_user = self._find_next_suitable_profile(found_users)
         if found_user:
@@ -91,6 +93,7 @@ class VKBotFunc:
         else:
             self.send_msg(user_id, "Список найденных пользователей закончился")
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def add_to_blacklist(self, payload: dict, bot_user) -> None:
         user = self.DB.select_vk_user(bot_user.id)
         adding_result = self.DB.insert_blacklist(banned=payload, vk_user=user)
@@ -104,6 +107,7 @@ class VKBotFunc:
             self.send_msg(bot_user.id, f"Пользователь {(payload['user_id'])} "
                                        f"{payload['first_name']} {payload['last_name']} не найден")
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def add_to_favourites(self, payload: dict, bot_user) -> None:
         user = self.DB.select_vk_user(bot_user.id)
         adding_result = self.DB.insert_favourites(favourites=payload, vk_user=user)
@@ -117,6 +121,7 @@ class VKBotFunc:
             self.send_msg(bot_user.id, f"Пользователь {(payload['user_id'])} "
                                        f"{payload['first_name']} {payload['last_name']} не найден")
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def get_favourites(self, bot_user_id: int) -> None:
         users_data = self.DB.select_vk_users_data(bot_user_id)
         favourites_list = users_data.favourites
@@ -146,6 +151,7 @@ class VKBotFunc:
         )
         self.send_keyboard(user_id, settings_keyboard, 'Настройки поиска')
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def starting_actions(self, user_id: int, use_new_settings: bool = False) -> None:
         self.found_person_index = -1
         self.vk_core.get_profiles_info(user_id)
@@ -164,6 +170,7 @@ class VKBotFunc:
         self.send_keyboard(user_id, self.working_keyboard)
         self.send_next_found_person(user_id, self.found_users)
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_increase_age(self, user_id: int) -> None:
         self.bot_settings.increase_age_to()
         self.bot_settings.correct_age_range()
@@ -171,6 +178,7 @@ class VKBotFunc:
                                f"от {self.bot_settings.age_from} до {self.bot_settings.age_to}")
         self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_decrease_age(self, user_id) -> None:
         self.bot_settings.decrease_age_from()
         self.bot_settings.correct_age_range()
@@ -178,6 +186,7 @@ class VKBotFunc:
                                f"от {self.bot_settings.age_from} до {self.bot_settings.age_to}")
         self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_ignore_blacklist(self, user_id) -> None:
         self.bot_settings.switch_use_blacklist()
         if self.bot_settings.use_blacklist:
@@ -186,6 +195,7 @@ class VKBotFunc:
             self.send_msg(user_id, "Блэклист выключен")
         self.send_inline_keyboard(user_id, self.new_search_keyboard, 'Поиск с новыми настройками:')
 
+    @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_reset(self, user_id) -> None:
         age = self.vk_core.vk_bot_user.age
         if age:

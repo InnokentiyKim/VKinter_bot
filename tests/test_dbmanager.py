@@ -35,9 +35,7 @@ class TestDBManager(unittest.TestCase):
         # Проверка выборки пользователя из базы данных
         mock_user = VKUser(id=1, first_name="Test", last_name="User")
         self.mock_session.execute.return_value.scalars.return_value.first.return_value = mock_user
-
         user = self.db_manager.select_vk_user(1)
-
         # Убедимся, что вернулся правильный пользователь
         self.assertIsNotNone(user)
         self.assertEqual(user.first_name, "Test")
