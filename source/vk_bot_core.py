@@ -1,6 +1,6 @@
 from vk_api.longpoll import VkLongPoll
 from time import sleep
-from bot_logging.bot_logging import error_logger
+from bot_logging.bot_logging import error_logger, bot_exception_logger, LOGGER_PATH
 
 TIMEOUT = 5
 MIN_AGE = 16
@@ -30,9 +30,11 @@ class BotSettings:
     def get_ages(self) -> tuple:
         return self.age_from, self.age_to
 
+    @bot_exception_logger(LOGGER_PATH)
     def decrease_age_from(self, age: int = 1):
         self.age_from -= age
 
+    @bot_exception_logger(LOGGER_PATH)
     def increase_age_to(self, age: int = 1):
         self.age_to += age
 
@@ -40,6 +42,7 @@ class BotSettings:
         self.age_from = age_from
         self.age_to = age_to
 
+    @bot_exception_logger(LOGGER_PATH)
     def switch_use_blacklist(self) -> None:
         if self.use_blacklist:
             self.use_blacklist = False
@@ -52,6 +55,7 @@ class BotSettings:
         if self.age_to > MAX_AGE:
             self.age_to = MAX_AGE
 
+    @bot_exception_logger(LOGGER_PATH)
     def reset_settings(self, user_age: int = 20, diff: int = 1) -> None:
         self.age_from = user_age - diff
         self.age_to = user_age + diff

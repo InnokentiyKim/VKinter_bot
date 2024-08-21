@@ -14,11 +14,9 @@ class TestDBManager(unittest.TestCase):
 
     def test_insert_vk_user(self):
         # Проверка вставки нового пользователя в базу данных
-        vk_user = VKUser(id=1, first_name="Test", last_name="User")
+        vk_user = VKUser(id=1,first_name="Test", last_name="User")
         self.mock_session.commit = MagicMock()
-
         result = self.db_manager.insert_vk_user(vk_user)
-
         # Убедимся, что пользователь был добавлен и commit был вызван
         self.mock_session.add.assert_called_once_with(vk_user)
         self.mock_session.commit.assert_called_once()
@@ -26,7 +24,7 @@ class TestDBManager(unittest.TestCase):
 
     def test_insert_vk_user_duplicate(self):
         # Проверка обработки ошибки вставки дубликата
-        self.mock_session.commit.side_effect = IntegrityError("Duplicate", "params", "orig")
+        self.mock_session.commit.side_effect = IntegrityError("Duplicate", "params", Exception())
         vk_user = VKUser(id=1, first_name="Test", last_name="User")
         result = self.db_manager.insert_vk_user(vk_user)
         self.assertFalse(result)

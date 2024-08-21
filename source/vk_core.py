@@ -1,4 +1,6 @@
 import vk_api
+from vk_api.exceptions import VkApiError
+
 from settings.config import settings, GENDER
 from source.vk_entity import VKBotUser
 from bot_logging.bot_logging import error_logger, bot_exception_logger, LOGGER_PATH
@@ -15,13 +17,12 @@ class VKCore:
             info = self.vk.account.getProfileInfo(user_id=user_id)
             self.vk_bot_user.set_vk_user(user_id, info)
             return True
+        except VkApiError as ApiError:
+            error_logger.error(ApiError)
+            return False
         except Exception as error:
             error_logger.error(error)
             return False
-
-    @staticmethod
-    def _get_age_range(users_age: int, min_lower_age: int = 2, max_upper_age: int = 2) -> tuple:
-        return users_age - min_lower_age, users_age + max_upper_age
 
     @bot_exception_logger(LOGGER_PATH)
     def search_users(self, query: str = '', count: int = settings.SEARCH_LIMIT,

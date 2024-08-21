@@ -19,7 +19,7 @@ class Settings:
     URL = os.getenv('URL')
     SEARCH_LIMIT = 1000
     VERSION = '1.0.0'
-    AUTHOR = 'InnCent'
+    AUTHORS = 'InnCent & Nick'
 
     @property
     def DSN(self):

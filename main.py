@@ -1,16 +1,15 @@
 from source.vk_bot_main import VKBot
-from bot_logging.bot_logging import error_logger
+from time import sleep
 
 
 def main():
-    while True:
-        try:
-            vk_bot = VKBot()
-            print("Бот запущен...")
-            vk_bot.start_pooling()
-        except Exception as error:
-            error_logger.error(error)
-            continue
+    try:
+        vk_bot = VKBot()
+        print("Бот запущен...")
+        vk_bot.start_pooling()
+    except Exception:
+        sleep(3)
+        main()
 
 
 if __name__ == '__main__':

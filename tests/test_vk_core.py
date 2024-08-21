@@ -30,7 +30,8 @@ class TestVKCore(unittest.TestCase):
     @patch('vk_api.VkApi.get_api')
     def test_get_profiles_info_api_error(self, mock_get_api):
         # Проверка обработки ошибки API
-        self.mock_api.account.getProfileInfo.side_effect = vk_api.exceptions.ApiError("Error message")
+        self.mock_api.account.getProfileInfo.side_effect = vk_api.exceptions.ApiError(
+            vk="Error message", method="getProfileInfo", values={}, raw={}, error=124)
         result = self.vk_core.get_profiles_info(123456)
         self.assertFalse(result)
 

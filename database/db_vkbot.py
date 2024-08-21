@@ -8,12 +8,30 @@ from bot_logging.bot_logging import error_logger
 
 
 class DBManager:
+    """
+    Класс, используемый для управления базой данных VK пользователей.
+    Этот класс предоставляет методы для вставки VK пользователей в базу данных,
+    вставки их избранных и черных списков, и получения данных VK пользователей.
+    Атрибуты:
+        engine (sqlalchemy.engine.Engine): Объект базы данных.
+        _session (sqlalchemy.orm.Session): Объект сессии базы данных.
+    """
     def __init__(self):
         self.engine = engine
         self._session = Session()
         Base.metadata.create_all(self.engine)
 
     def insert_vk_user(self, vk_user) -> bool:
+        """
+        Вставляет VK пользователя в базу данных.
+        Аргументы:
+            vk_user (VKUser): VK пользователь, который будет вставлен.
+        Возвращает:
+            bool: True, если пользователь был успешно вставлен, False в противном случае.
+        Вызывает:
+            IntegrityError: Если пользователь уже существует в базе данных.
+            DetachedInstanceError: Если пользователь неправильно присоединен к сессии.
+        """
         if isinstance(vk_user, VKUser):
             try:
                 with self._session as session:
@@ -29,6 +47,18 @@ class DBManager:
         return False
 
     def insert_favourites(self, favourites: dict, vk_user: VKUser) -> bool | None:
+        """
+        Вставляет избранных VK пользователя в базу данных.
+        Аргументы:
+            favourites (dict): Словарь, содержащий избранного пользователя.
+            vk_user (VKUser): Сам VK пользователь.
+        Возвращает:
+            bool: True, если избранный был успешно вставлен, False в противном случае.
+        Вызывает:
+            IntegrityError: Если избранный уже существуют в базе данных.
+            DetachedInstanceError: Если пользователь неправильно присоединен к сессии.
+            ValueError: Если словарь избранных пуст или недействителен.
+        """
         if isinstance(vk_user, VKUser):
             try:
                 with self._session as session:
@@ -47,6 +77,17 @@ class DBManager:
         return None
 
     def insert_blacklist(self, banned: dict, vk_user) -> bool | None:
+        """
+        Вставляет пользователя в черный список базы данных для последующего его исплючения из поиска.
+        Аргументы:
+            vk_user (VKUser): VK пользователь
+            blacklisted_user (VKUser): VK пользователь, который добавляется в черный список.
+        Возвращает:
+            bool: True, если пользователь был успешно добавлен в черный список, False в противном случае.
+        Вызывает:
+            IntegrityError: Если пользователь уже существует в черном списке.
+            DetachedInstanceError: Если один из пользователей неправильно присоединен к сессии.
+        """
         if isinstance(vk_user, VKUser):
             try:
                 with self._session as session:
@@ -65,6 +106,13 @@ class DBManager:
         return None
 
     def select_vk_user(self, vk_user_id: int) -> VKUser | None:
+        """
+        Выбирает VK пользователя из базы данных по его VK ID.
+        Аргументы:
+            vk_id (int): ID пользователя, которого нужно выбрать.
+        Возвращает:
+            Optional[VKUser]: Выбранный VK пользователь, или None, если не найден.
+        """
         try:
             with self._session as session:
                 query = (
@@ -77,6 +125,13 @@ class DBManager:
         return None
 
     def select_vk_users_data(self, vk_user_id: int) -> VKUser | None:
+        """
+        Выгружает данные пользователя из базы данных по его ID.
+        Аргументы:
+            vk_id (int): ID пользователя, которого нужно выбрать.
+        Возвращает:
+            Optional[VKUser]: Выбранный пользователь, или None, если не найден.
+        """
         try:
             with self._session as session:
                 query = (

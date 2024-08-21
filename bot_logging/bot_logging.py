@@ -16,6 +16,16 @@ error_logger.addHandler(error_handler)
 
 
 def bot_exception_logger(path: str, exc_info: bool = False):
+    """
+    Декоратор для логирования исключений.
+    Аргументы:
+        path (str): Путь к логеру.
+        exc_info (bool, optional): Включать ли информацию об исключении.
+    Возвращает:
+        callable: Декораторная функция, которая логгирует исключения.
+    Примечания:
+        Этот декоратор логгирует исключения, вызванные декорируемой функцией, включая имя функции, параметры и сообщение об ошибке.
+    """
     __logger = logging.getLogger(path)
     __logger.setLevel(logging.ERROR)
     handler = RotatingFileHandler(path, maxBytes=10000000, backupCount=5)
