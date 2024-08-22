@@ -2,6 +2,22 @@ from datetime import datetime
 
 
 class VKBotUser:
+    """
+    Класс для хранения информации о пользователе VK.
+    Атрибуты:
+        id (int): ID пользователя VK.
+        first_name (str): Имя пользователя.
+        last_name (str): Фамилия пользователя.
+        sex (int): Пол пользователя.
+        relation (int): Семейное положение пользователя.
+        city_id (int): ID города пользователя.
+        city (str): Название города пользователя.
+        bdate (str): Дата рождения пользователя.
+        age (int): Возраст пользователя.
+    Методы:
+        get_vk_user(self): Возвращает словарь с информацией о пользователе VK.
+        set_vk_user(self, user_id: int, info: dict): Устанавливает информацию о пользователе VK.
+    """
     def __init__(self):
         self.id = None
         self.first_name = None

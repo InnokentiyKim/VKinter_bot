@@ -6,6 +6,16 @@ from models.blacklist import BlackList
 
 
 class VKUser(Base):
+    """
+    Представляет сущность пользователя VK в базе данных.
+    Атрибуты:
+        id (int): Уникальный идентификатор пользователя VK.
+        first_name (str): Имя пользователя VK.
+        last_name (str): Фамилия пользователя VK.
+    Примечания:
+        Этот класс является моделью SQLAlchemy, представляющей таблицу в базе данных.
+        Он хранит информацию о пользователях VK, взаимодействовавших с приложением.
+    """
     __tablename__ = 'vk_user'
 
     id: Mapped[int] = mapped_column(primary_key=True)

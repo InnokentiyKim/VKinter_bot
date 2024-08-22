@@ -11,7 +11,24 @@ from bot_logging.bot_logging import bot_exception_logger, LOGGER_PATH
 
 
 class VKBotFunc:
+    """
+    Класс, реализующий основной функционал бота.
+    """
     def __init__(self):
+        """
+        Атрибуты:
+            vk_session (vk_api.VkApi): Объект сессии VK API.
+            vk (vk_api.VkApiMethod): Объект методов VK API.
+            DB (database.db_vkbot.DBManager): Объект для работы с базой данных.
+            start_keyboard (list[list[str]]): Начальная клавиатура.
+            working_keyboard (list[list[str]]): Клавиатура для работы с ботом.
+            new_search_keyboard (list[list[str]]): Клавиатура для начала нового поиска.
+            vk_core (source.vk_bot_core.VKCore): Основной объект для работы с VK API.
+            bot_settings (source.vk_bot_core.BotSettings): Объект для работы с настройками бота.
+            found_person_index (int): Индекс пользователя в списке найденных пользователей.
+            current_user (VKUser): Текущий пользователь.
+            found_users (list[VKUser]): Список найденных пользователей.
+        """
         self.vk_session = vk_api.VkApi(token=settings.token)
         self.vk = vk_api.VkApi(token=settings.api_token).get_api()
         self.DB = DBManager()
@@ -25,10 +42,24 @@ class VKBotFunc:
         self.found_users = []
 
     def send_chat_msg(self, chat_id, message):
+        """
+        Отправляет сообщение в чат.
+        Параметры:
+            chat_id (int): ID чата.
+            message (str): Текст сообщения.
+        """
         self.vk_session.method('messages.send', {'chat_id': chat_id, 'message': message,
                                                  'random_id': randrange(10 ** 7), })
 
     def send_msg(self, user_id: int, message: str, send_photo: bool = False, photo_attach: list[str] = None):
+        """
+        Отправляет сообщение пользователю чат-бота.
+        Параметры:
+            user_id (int): ID пользователя.
+            message (str): Текст сообщения.
+            send_photo (bool): Отправлять ли фото.
+            photo_attach (list[str]): Список ID фото.
+        """
         if not send_photo:
             self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                      'random_id': randrange(10 ** 7), })
@@ -38,6 +69,14 @@ class VKBotFunc:
                                                      'attachment': attachment, 'random_id': randrange(10 ** 7), })
 
     def send_photo_msg(self, user_id: int, owner_id: str, photo_id: str, message: str = None):
+        """
+        Отправляет фото пользователю чат-бота.
+        Параметры:
+            user_id (int): ID пользователя.
+            owner_id (str): ID владельца фото.
+            photo_id (str): ID фото.
+            message (str): Текст сообщения.
+        """
         attachment = f"photo{owner_id}_{photo_id}"
         if message:
             self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
@@ -47,19 +86,48 @@ class VKBotFunc:
                                                      'random_id': randrange(10 ** 7), })
 
     def send_keyboard(self, user_id, keyboard, message: str = 'Используйте клавиатуру:'):
+        """
+        Отправляет сообщение пользователю чат-бота с клавиатурой.
+        Параметры:
+            user_id (int): ID пользователя.
+            keyboard (list[list[str]]): Клавиатура.
+            message (str): Текст сообщения.
+        """
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                  'keyboard': keyboard, 'random_id': randrange(10 ** 7)})
 
     def send_inline_keyboard(self, user_id, inline_keyboard, message: str = 'Выберите действие:'):
+        """
+        Отправляет сообщение пользователю чат-бота с inline клавиатурой.
+        Параметры:
+            user_id (int): ID пользователя.
+            inline_keyboard (list[list[str]]): Клавиатура.
+            message (str): Текст сообщения.
+        """
         self.vk_session.method('messages.send', {'user_id': user_id, 'message': message,
                                                  'keyboard': inline_keyboard, 'random_id': randrange(10 ** 7)})
 
     def send_stick(self, user_id, id_stick):
+        """
+        Отправляет стикер пользователю чат-бота.
+        Параметры:
+            user_id (int): ID пользователя.
+            id_stick (int): ID стикера.
+        """
         self.vk_session.method('messages.send', {'user_id': user_id, 'sticker_id': id_stick,
                                                  'random_id': randrange(10 ** 7), })
 
     @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def _find_next_suitable_profile(self, found_users: list[dict]) -> dict | None:
+        """
+        Находит подходящего пользователя.
+        Если подходящего пользователя нет, то возвращает None.
+        Проверяет наличие в черном списке, статус пользователя и открытость профиля.
+        Параметры:
+            found_users (list[dict]): Список найденных пользователей.
+        Возвращает:
+            dict: Подходящего пользователя.
+        """
         while self.found_person_index < len(found_users):
             self.found_person_index += 1
             found_user = found_users[self.found_person_index]
@@ -78,6 +146,13 @@ class VKBotFunc:
         return None
 
     def _form_user_card(self, user_id: int, found_user: dict) -> None:
+        """
+        Формирует карточку пользователя.
+        Параметры:
+            user_id (int): ID пользователя.
+            found_user (dict): Найденный пользователь.
+        Возвращает: None
+        """
         users_photos = self.vk_core.get_users_photos(owner_id=found_user['id'])
         self.send_msg(user_id, f"{found_user['first_name']} {found_user['last_name']}\n "
                                f"Профиль: https://vk.com/id{found_user['id']}")
@@ -88,6 +163,14 @@ class VKBotFunc:
         self.send_inline_keyboard(user_id, items_keyboard)
 
     def send_next_found_person(self, user_id: int, found_users: list[dict]):
+        """
+        Отправляет следующего подходящего пользователя.
+        Если подходящего пользователя нет, то отправляет сообщение об окончании поиска.
+        Параметры:
+            user_id (int): ID пользователя.
+            found_users (list[dict]): Список найденных пользователей.
+        Возвращает: None
+        """
         found_user = self._find_next_suitable_profile(found_users)
         if found_user:
             self._form_user_card(user_id, found_user)
@@ -95,6 +178,13 @@ class VKBotFunc:
             self.send_msg(user_id, MESSAGES['END_OF_LIST'])
 
     def add_to_blacklist(self, payload: dict, bot_user) -> None:
+        """
+        Добавляет пользователя в черный список.
+        Если пользователь уже в черном списке или не найден, то отправляет сообщение об ошибке.
+        Параметры:
+            payload (dict): Полезная нагрузка (идентификация действия и пользователя).
+            bot_user (VKUser): Пользователь чат-бота.
+        """
         user = self.DB.select_vk_user(bot_user.id)
         adding_result = self.DB.insert_blacklist(banned=payload, vk_user=user)
         if adding_result:
@@ -108,6 +198,13 @@ class VKBotFunc:
                                        f"{payload['first_name']} {payload['last_name']} не найден")
 
     def add_to_favourites(self, payload: dict, bot_user) -> None:
+        """
+        Добавляет пользователя в избранное.
+        Если пользователь уже в избранном или не найден, то отправляет сообщение об ошибке.
+        Параметры:
+            payload (dict): Полезная нагрузка (идентификация действия и пользователя).
+            bot_user (VKUser): Пользователь чат-бота.
+        """
         user = self.DB.select_vk_user(bot_user.id)
         adding_result = self.DB.insert_favourites(favourites=payload, vk_user=user)
         if adding_result is True:
@@ -121,6 +218,13 @@ class VKBotFunc:
                                        f"{payload['first_name']} {payload['last_name']} не найден")
 
     def get_favourites(self, bot_user_id: int) -> None:
+        """
+        Отправляет список избранных пользователей.
+        Если список пуст, то отправляет сообщение об ошибке.
+        Параметры:
+            bot_user_id (int): ID пользователя чат-бота.
+        Возвращает: None
+        """
         users_data = self.DB.select_vk_users_data(bot_user_id)
         favourites_list = users_data.favourites
         if favourites_list:
@@ -133,6 +237,12 @@ class VKBotFunc:
             self.send_msg(bot_user_id, f"⭐ Список избранных пользователей пуст 🚫")
 
     def get_settings(self, user_id: int) -> None:
+        """
+        Отправляет клавиатуру с настройками.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+        Возвращает: None
+        """
         settings_keyboard = Keyboard().get_settings_keyboard(
             user_id=user_id,
             buttons_titles=[
@@ -150,6 +260,15 @@ class VKBotFunc:
         self.send_keyboard(user_id, settings_keyboard, MESSAGES['SETTINGS'])
 
     def starting_actions(self, user_id: int, use_new_settings: bool = False) -> None:
+        """
+        Выполняет начальные действия.
+        Если пользователь не найден в базе данных, то добавляет его.
+        Выполняет поиск новых пользователей и отправляет первого подходящего кандидата в чат.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+            use_new_settings (bool): Использовать ли новые настройки.
+        Возвращает: None
+        """
         self.found_person_index = -1
         self.vk_core.get_profiles_info(user_id)
         vk_user = self.vk_core.vk_bot_user
@@ -169,6 +288,11 @@ class VKBotFunc:
 
     @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_increase_age(self, user_id: int) -> None:
+        """
+        Увеличивает диапазон поиска.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+        """
         self.bot_settings.increase_age_to()
         self.bot_settings.correct_age_range()
         self.send_msg(user_id, f"⚙ Диапазон поиска: 🔄 "
@@ -177,6 +301,11 @@ class VKBotFunc:
 
     @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_decrease_age(self, user_id) -> None:
+        """
+        Уменьшает диапазон поиска.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+        """
         self.bot_settings.decrease_age_from()
         self.bot_settings.correct_age_range()
         self.send_msg(user_id, f"⚙ Диапазон поиска: 🔄 "
@@ -185,6 +314,11 @@ class VKBotFunc:
 
     @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_ignore_blacklist(self, user_id) -> None:
+        """
+        Переключает использование черного списка.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+        """
         self.bot_settings.switch_use_blacklist()
         if self.bot_settings.use_blacklist:
             self.send_msg(user_id, "⚙ Блэклист включен ☀")
@@ -194,6 +328,11 @@ class VKBotFunc:
 
     @bot_exception_logger(LOGGER_PATH, exc_info=True)
     def settings_reset(self, user_id) -> None:
+        """
+        Сбрасывает настройки бота.
+        Параметры:
+            user_id (int): ID пользователя чат-бота.
+        """
         age = self.vk_core.vk_bot_user.age
         if age:
             self.bot_settings.reset_settings(age)

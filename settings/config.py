@@ -6,6 +6,16 @@ load_dotenv()
 
 
 class Settings:
+    """
+    Представляет настройки приложения.
+    Содержит чувствительную информацию и данные для подключения к базе данных.
+    Атрибуты:
+        vk_token (str): Токен бота VK.
+        vk_api_token (str): Токен API VK.
+        vk_group_id (int): ID группы VK.
+    Примечания:
+        Этот класс используется для хранения и управления настройками приложения.
+    """
     def __init__(self):
         self.vk_token = os.getenv('TOKEN')
         self.vk_api_token = os.getenv('API_TOKEN')
@@ -40,6 +50,9 @@ class Settings:
 
 settings = Settings()
 
+"""
+Словарь команд бота
+"""
 COMMANDS = {
     'START': 'начать',
     'HELLO': 'привет',
